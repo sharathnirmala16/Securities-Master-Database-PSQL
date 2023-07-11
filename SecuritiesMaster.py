@@ -111,5 +111,6 @@ class DataMaster:
         else:
             pass
     
+#Test Code
 dm = DataMaster(psql_credentials['host'], psql_credentials['port'], psql_credentials['username'], psql_credentials['password'])
 dm.get_price_data([], -1, datetime.now(), datetime.now(), vendor='Any')
