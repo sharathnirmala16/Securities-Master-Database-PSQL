@@ -32,7 +32,7 @@ commands = {
             name VARCHAR(255) NULL,
             sector VARCHAR(255) NULL,  
             currency VARCHAR(64) NULL,
-            linked_table VARCHAR(32) NOT NULL UNIQUE, 
+            linked_table VARCHAR(32) NOT NULL, 
             created_datetime TIMESTAMP NOT NULL, 
             last_updated_datetime TIMESTAMP NOT NULL, 
             CONSTRAINT index_exchange_id
