@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import secrets
-import psycopg2
 import sqlalchemy
 from sqlalchemy import sql
 from datetime import datetime
@@ -38,27 +37,33 @@ class DataMaster:
         '''
         Creates the necessary database connection objects.
         '''
-        self.__url = f'postgresql+psycopg2://{username}:{password}@{host}:{port}/securities_master'
-        self.__engine = sqlalchemy.create_engine(self.__url, isolation_level='AUTOCOMMIT')
-        self.__create_base_tables()
+        try:
+            self.__url = f'postgresql+psycopg2://{username}:{password}@{host}:{port}/securities_master'
+            self.__engine = sqlalchemy.create_engine(self.__url, isolation_level='AUTOCOMMIT')
+            self.__create_base_tables()
         
-        #Converts the INTERVAL class into a dictionary for reference inside the DataMaster class.
-        self.__intervals = { v:m for v, m in vars(INTERVAL).items() if not (v.startswith('_')  or callable(m)) }
+            #Converts the INTERVAL class into a dictionary for reference inside the DataMaster class.
+            self.__intervals = { v:m for v, m in vars(INTERVAL).items() if not (v.startswith('_')  or callable(m)) }
+        except Exception as e:
+            print(e)
 
     def __create_base_tables(self) -> None:
         '''
         Specifically for creating the base tables that are 
         necessary for basic operations.
         '''
-        for command in commands.values():
-            with self.__engine.connect() as conn:
-                conn.execute(sql.text(command))
+        try:
+            for command in commands.values():
+                with self.__engine.connect() as conn:
+                    conn.execute(sql.text(command))
+        except Exception as e:
+            print(e)
 
     def __verify_vendor(self, vendor : str) -> bool:
-        '''
-        Used to verify that input vendor exists.
-        '''
-        pass
+        vendors_list = self.get_vendors_table()['name']
+        if vendor in vendors_list.values or vendor == 'Any':
+            return True
+        return False
 
     def __search_valid_vendor(
         self, 
@@ -85,7 +90,56 @@ class DataMaster:
     ) -> Union[pd.DataFrame, None]:
         pass
 
-    def get_price_data(
+    def get_exchange_table(self) -> pd.DataFrame:
+        try:
+            return pd.read_sql_query(sql = 'SELECT * FROM Exchange;', con = self.__engine)
+        except Exception as e:
+            print(e)
+
+    def get_vendors_table(self) -> pd.DataFrame:
+        try:
+            return pd.read_sql_query(sql = 'SELECT * FROM DataVendor;', con = self.__engine)
+        except Exception as e:
+            print(e)
+    
+    def get_symbol_table(self) -> pd.DataFrame:
+        try:
+            return pd.read_sql_query(sql = 'SELECT * FROM Symbol;', con = self.__engine)
+        except Exception as e:
+            print(e)
+    
+    def add_vendor(self, name : str, website_url : str, support_email : str) -> None:
+        try:
+            with self.__engine.connect() as conn:
+                conn.execute(sql.text(
+                    f'''
+                    INSERT INTO DataVendor 
+                    (name, website_url, support_email, created_datetime, last_updated_datetime) 
+                    VALUES
+                    ('{name}', '{website_url}', '{support_email}', '{datetime.now()}', '{datetime.now()}');
+                    '''
+                ))
+        except Exception as e:
+            print(e)
+
+    def update_vendor(self, old_name : str, new_name : str, website_url : str, support_email : str) -> None:
+        try:
+            with self.__engine.connect() as conn:
+                conn.execute(sql.text(
+                    f'''
+                    UPDATE DataVendor 
+                    SET 
+                    name = '{new_name}', 
+                    website_url = '{website_url}', 
+                    support_email = '{support_email}',
+                    last_updated_datetime = '{datetime.now()}'
+                    WHERE name = '{old_name}';
+                    '''
+                ))
+        except Exception as e:
+            print(e)
+
+    def get_price_tables(
         self,
         tickers : List[str],
         interval : int,
@@ -100,8 +154,8 @@ class DataMaster:
         data for a list of tickers.
         '''
         #Checking validity of inputs
-        assert len(tickers) > 0, f'tickers list is empty'
-        assert self.__verify_vendor(vendor), f'Invalid vendor.'
+        assert len(tickers) > 0, 'tickers list is empty'
+        assert self.__verify_vendor(vendor), f'\'{vendor}\' not in vendor list.'
         assert interval in self.__intervals.values(), f'{interval} not in given INTERVAL. Use these intervals:\n{self.__intervals}'
         assert end_datetime > start_datetime, f'start_datetime({start_datetime}) must be before end_datetime({end_datetime})'
         
@@ -111,6 +165,4 @@ class DataMaster:
         else:
             pass
     
-#Test Code
-dm = DataMaster(psql_credentials['host'], psql_credentials['port'], psql_credentials['username'], psql_credentials['password'])
-dm.get_price_data([], -1, datetime.now(), datetime.now(), vendor='Any')
+
