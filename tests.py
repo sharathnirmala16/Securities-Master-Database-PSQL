@@ -36,6 +36,7 @@ def get_price_tables_tests():
     #print(dm.get_price_tables([''], INTERVAL.m1, datetime.now(), datetime(2024,7,12,10,50,8), vendor='yahoo finance'))
 
 def test_get_tickers():
+    print(NSETickers.get_url_dict())
     print(NSETickers.get_tickers(index='NIFTY50'))
     print(NSETickers.get_tickers(index='NIFTYREALTY'))
     #print(NSETickers.get_tickers(index='NIFTYREALITY'))
