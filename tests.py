@@ -1,7 +1,8 @@
-import numpy as np
-import pandas as pd
+import pytz
 import secrets
 import sqlalchemy
+import numpy as np
+import pandas as pd
 from sqlalchemy import sql
 from datetime import datetime
 from sql_commands import commands
@@ -9,6 +10,7 @@ from typing import Union, Dict, List
 from credentials import psql_credentials
 from SecuritiesMaster import *
 from VendorsAPIManagers import *
+from Exchanges.NSE import *
 
 #DataMaster instance
 dm = DataMaster(psql_credentials['host'], psql_credentials['port'], psql_credentials['username'], psql_credentials['password'])

@@ -1,9 +1,8 @@
 commands = {
     'CreateExchangeTable':'''
         CREATE TABLE IF NOT EXISTS Exchange (
-            id SERIAL PRIMARY KEY, 
-            abbreviation VARCHAR(32) NOT NULL, 
-            name VARCHAR(255) NOT NULL, 
+            name VARCHAR(255) PRIMARY KEY,
+            abbreviation VARCHAR(32) NOT NULL,  
             website_url VARCHAR(255) NULL, 
             city VARCHAR(255) NULL, 
             country VARCHAR(255) NULL, 
@@ -15,8 +14,7 @@ commands = {
     ''',
     'CreateDataVendorTable':'''
         CREATE TABLE IF NOT EXISTS DataVendor (
-            id SERIAL PRIMARY KEY, 
-            name VARCHAR(255) NOT NULL,
+            name VARCHAR(255) PRIMARY KEY,
             website_url VARCHAR(255) NULL,  
             support_email VARCHAR(255) NULL,  
             created_datetime TIMESTAMP NOT NULL, 
@@ -24,10 +22,9 @@ commands = {
         );
     ''',
     'CreateSymbolTable':'''
-        CREATE TABLE IF NOT EXISTS Symbol (
-            id SERIAL PRIMARY KEY, 
-            exchange_id INT NULL,
-            ticker VARCHAR(64) NOT NULL,
+        CREATE TABLE IF NOT EXISTS Symbol ( 
+            ticker VARCHAR(64) PRIMARY KEY,
+            exchange VARCHAR(255) NULL,
             instrument VARCHAR(64) NOT NULL,
             name VARCHAR(255) NULL,
             sector VARCHAR(255) NULL,  
@@ -35,9 +32,9 @@ commands = {
             linked_table VARCHAR(32) NOT NULL, 
             created_datetime TIMESTAMP NOT NULL, 
             last_updated_datetime TIMESTAMP NOT NULL, 
-            CONSTRAINT index_exchange_id
-                FOREIGN KEY(exchange_id)
-                    REFERENCES Exchange(id) 
+            CONSTRAINT ticker_exchange_frk
+                FOREIGN KEY(exchange)
+                    REFERENCES Exchange(name) 
         );
     ''',
 }

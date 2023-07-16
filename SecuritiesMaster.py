@@ -1,33 +1,14 @@
+import random
+import string
+import sqlalchemy
 import numpy as np
 import pandas as pd
-import secrets
-import sqlalchemy
 from sqlalchemy import sql
+from commons import INTERVAL
 from datetime import datetime
 from sql_commands import commands
 from typing import Union, Dict, List
 from credentials import psql_credentials
-
-class INTERVAL:
-    ms1 = 1
-    ms5 = 5
-    ms10 = 10
-    ms100 = 100
-    ms500 = 500
-    s1 = 1000
-    s5 = 5000
-    s15 = 15000
-    s30 = 30000
-    m1 = 60000
-    m5 = 300000
-    m15 = 900000
-    m30 = 1800000
-    h1 = 3600000
-    h4 = 14400000
-    d1 = 86400000
-    w1 = 604800000
-    mo1 = 2592000000
-    y1 = 31104000000
 
 class DataMaster:
     '''
@@ -64,6 +45,12 @@ class DataMaster:
         if vendor in vendors_list.values or vendor == 'Any':
             return True
         return False
+    
+    @staticmethod
+    def __random_string(length : int) -> str:
+        letters = string.ascii_lowercase
+        random_string = ''.join(random.choice(letters) for _ in range(length))
+        return random_string
 
     def __search_valid_vendor(
         self, 
@@ -139,7 +126,96 @@ class DataMaster:
         except Exception as e:
             print(e)
 
-    def get_price_tables(
+    def add_exchange(
+        self, 
+        abbreviation : str, 
+        name : str, 
+        website_url : str, 
+        city : str, 
+        country : str, 
+        currency : str, 
+        time_zone_offset : datetime
+    ) -> None:
+        try:
+            with self.__engine.connect() as conn:
+                conn.execute(sql.text(
+                    f'''
+                    INSERT INTO Exchange
+                    (abbreviation, name, website_url, city, country, currency, time_zone_offset, created_datetime, last_updated_datetime) 
+                    VALUES
+                    ('{abbreviation}', '{name}', '{website_url}', '{city}', '{country}', '{currency}', '{time_zone_offset}', '{datetime.now()}', '{datetime.now()}');
+                    '''
+                ))
+        except Exception as e:
+            print(e)
+
+    def __create_linked_table(self, linked_table_hash : str) -> None:
+        '''
+        Used to create the linked table which links to price table and fundamental tables
+        '''
+        try:
+            with self.__engine.connect() as conn:
+                conn.execute(sql.text(
+                    f'''
+                    CREATE TABLE {linked_table_hash} (
+                        id SERIAL PRIMARY KEY,
+                        vendor VARCHAR(255) NULL,
+                        timeframe INT NOT NULL,
+                        price_table VARCHAR(32) NOT NULL,
+                        created_datetime TIMESTAMP NOT NULL, 
+                        last_updated_datetime TIMESTAMP NOT NULL,
+                        CONSTRAINT data_vendor_frk
+                            FOREIGN KEY(vendor)
+                                REFERENCES DataVendor(name) 
+                    );
+                    '''
+                ))
+        except Exception as e:
+            print(e)
+
+    #NOTE Delete in Final Revision, for testing purpose only
+    def temp(self):
+        try:
+            tables = pd.read_sql_query(sql = '''select table_name from information_schema.tables where table_catalog = 'securities_master' and table_schema = 'public';''', con = self.__engine)['table_name'].to_list()
+            tables.remove('datavendor')
+            tables.remove('symbol')
+            tables.remove('exchange')
+            for table in tables:
+                with self.__engine.connect() as conn:
+                    conn.execute(sql.text(
+                        f'''
+                        DROP TABLE {table};
+                        '''
+                    ))
+
+        except Exception as e:
+            print(e)
+
+    def add_symbol(
+        self,
+        exchange : str,
+        ticker : str,
+        instrument : str,
+        name : str,
+        sector : str,
+        currency : str
+    ) -> None:
+        try:
+            with self.__engine.connect() as conn:
+                linked_table_hash = DataMaster.__random_string(32)
+                conn.execute(sql.text(
+                    f'''
+                    INSERT INTO Symbol
+                    (ticker, exchange, instrument, name, sector, currency, linked_table, created_datetime, last_updated_datetime)
+                    VALUES
+                    ('{ticker}', '{exchange}', '{instrument}', '{name}', '{sector}', '{currency}', '{linked_table_hash}', '{datetime.now()}', '{datetime.now()}');
+                    '''
+                ))
+            self.__create_linked_table(linked_table_hash)
+        except Exception as e:
+            pass
+
+    def get_prices(
         self,
         tickers : List[str],
         interval : int,
