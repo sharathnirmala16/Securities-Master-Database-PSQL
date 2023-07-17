@@ -9,7 +9,7 @@ from sql_commands import commands
 from typing import Union, Dict, List
 from credentials import psql_credentials
 from SecuritiesMaster import *
-from VendorsAPIManagers import *
+from base_classes import *
 from Exchanges.NSE import *
 
 #DataMaster instance
