@@ -4,7 +4,7 @@ from commons import *
 from io import StringIO
 from requests import Session
 from abc import ABC, abstractmethod
-from base_classes import IndexLoader
+from BaseClasses import IndexLoader
 from typing import Union, Dict, List
 from datetime import datetime, timedelta
 
@@ -35,3 +35,6 @@ class NSETickers(IndexLoader):
             return tickers_sector
         except Exception as e:
             print(e)
+
+class BSETickers(IndexLoader):
+    pass

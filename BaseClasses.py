@@ -99,7 +99,7 @@ class APIManager(ABC):
         end_datetime : datetime, 
         replace_close = False, 
         progress = False
-    ) -> pd.DataFrame:
+    ) -> Dict[str, pd.DataFrame]:
         pass
 
     @staticmethod
@@ -112,6 +112,6 @@ class APIManager(ABC):
         end_datetime : datetime,
         replace_close = False,
         progress = False,
-    ) -> pd.DataFrame:
+    ) -> Dict[str, pd.DataFrame]:
         pass
 

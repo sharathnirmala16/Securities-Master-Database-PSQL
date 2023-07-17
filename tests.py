@@ -9,8 +9,8 @@ from sql_commands import commands
 from typing import Union, Dict, List
 from credentials import psql_credentials
 from SecuritiesMaster import *
-from base_classes import *
-from Exchanges.NSE import *
+from BaseClasses import *
+from Exchanges import *
 
 #DataMaster instance
 dm = DataMaster(psql_credentials['host'], psql_credentials['port'], psql_credentials['username'], psql_credentials['password'])
