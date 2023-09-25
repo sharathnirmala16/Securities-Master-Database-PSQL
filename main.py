@@ -1,3 +1,4 @@
+import jwt
 import schemas
 import models
 from models import User
@@ -12,8 +13,14 @@ from utils import (
     create_refresh_token,
     verify_password,
     get_hashed_password,
+    JWT_SECRET_KEY,
+    JWT_REFRESH_SECRET_KEY,
+    ALGORITHM,
 )
-from typing import Dict
+from typing import Dict, List
+from securities_master import SecuritiesMaster
+from credentials import psql_credentials
+from datetime import datetime
 
 Base.metadata.create_all(engine)
 
@@ -26,6 +33,13 @@ def get_session() -> None:
         session.close()
 
 
+securities_master = SecuritiesMaster(
+    psql_credentials["host"],
+    psql_credentials["port"],
+    psql_credentials["username"],
+    psql_credentials["password"],
+)
+
 app = FastAPI()
 
 
@@ -33,7 +47,7 @@ app = FastAPI()
 async def register_user(
     user: schemas.UserCreate, session: Session = Depends(get_session)
 ) -> Dict:
-    existing_user = session.query(models.User).filter_by(username=user.username).first()
+    existing_user = session.query(User).filter_by(username=user.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already registered")
 
@@ -80,17 +94,11 @@ async def login(
     }
 
 
-@app.get("/getusers")
-def getusers(
-    dependencies=Depends(JWTBearer()), session: Session = Depends(get_session)
-):
-    users = session.query(models.User.username).all()
-    return users
-
-
 @app.post("/change-password")
-def change_password(
-    request: schemas.ChangePassword, db: Session = Depends(get_session)
+async def change_password(
+    request: schemas.ChangePassword,
+    dependencies=Depends(JWTBearer()),
+    db: Session = Depends(get_session),
 ):
     user: User = (
         db.query(models.User).filter(models.User.username == request.username).first()
@@ -110,3 +118,73 @@ def change_password(
     db.commit()
 
     return {"message": "Password changed successfully"}
+
+
+@app.post("/logout")
+def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_session)):
+    token = dependencies
+    payload = jwt.decode(token, JWT_SECRET_KEY, ALGORITHM)
+    username = payload["sub"]
+    token_record = db.query(models.TokenTable).all()
+    info = []
+    for record in token_record:
+        if (datetime.utcnow() - record.created_date).days > 1:
+            info.append(record.username)
+    if info:
+        existing_token = (
+            db.query(models.TokenTable)
+            .where(models.TokenTable.username.in_(info))
+            .delete()
+        )
+        db.commit()
+
+    existing_token = (
+        db.query(models.TokenTable)
+        .filter(
+            models.TokenTable.username == username,
+            models.TokenTable.access_token == token,
+        )
+        .first()
+    )
+    if existing_token:
+        existing_token.status = False
+        db.add(existing_token)
+        db.commit()
+        db.refresh(existing_token)
+    return {"message": "Logout Successfully"}
+
+
+def token_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        payload = jwt.decode(kwargs["dependencies"], JWT_SECRET_KEY, ALGORITHM)
+        username = payload["sub"]
+        data = (
+            kwargs["session"]
+            .query(models.TokenTable)
+            .filter_by(
+                username=username, access_toke=kwargs["dependencies"], status=True
+            )
+            .first()
+        )
+        if data:
+            return func(kwargs["dependencies"], kwargs["session"])
+
+        else:
+            return {"msg": "Token blocked"}
+
+    return wrapper
+
+
+@app.get("/get-all-tables")
+async def get_all_tables(dependencies=Depends(JWTBearer())):
+    tables: List[str] = securities_master.get_all_tables()
+    return {"tables": tables}
+
+
+@app.get("/getusers")
+async def getusers(
+    dependencies=Depends(JWTBearer()), session: Session = Depends(get_session)
+):
+    users = session.query(models.User.username).all()
+    return users

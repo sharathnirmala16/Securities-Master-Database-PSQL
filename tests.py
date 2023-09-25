@@ -8,12 +8,12 @@ from datetime import datetime
 from sql_commands import commands
 from typing import Union, Dict, List
 from credentials import psql_credentials
-from SecuritiesMaster import *
+from securities_master import *
 from BaseClasses import *
 from Exchanges import *
 
 # DataMaster instance
-dm = DataMaster(
+dm = SecuritiesMaster(
     psql_credentials["host"],
     psql_credentials["port"],
     psql_credentials["username"],

@@ -9,7 +9,7 @@ from Exchanges import *
 from BaseClasses import APIManager
 from abc import ABC, abstractmethod
 from typing import Union, Dict, List
-from SecuritiesMaster import DataMaster
+from securities_master import DataMaster
 from datetime import datetime, timedelta
 from credentials import psql_credentials
 
