@@ -75,19 +75,25 @@ class SecuritiesMaster:
 
     def get_all_tables(self) -> List[str]:
         try:
-            with self.__engine.connect() as conn:
-                tables = pd.read_sql_query(
-                    sql="""select table_name from information_schema.tables where table_catalog = 'securities_master' and table_schema = 'public';""",
-                    con=self.__engine,
-                )["table_name"].to_list()
-                try:
-                    tables.remove("users")
-                    tables.remove("token")
-                except:
-                    pass
-                return tables
+            tables = pd.read_sql_query(
+                sql="""select table_name from information_schema.tables where table_catalog = 'securities_master' and table_schema = 'public';""",
+                con=self.__engine,
+            )["table_name"].to_list()
+            try:
+                tables.remove("users")
+                tables.remove("token")
+            except:
+                pass
+            return tables
         except Exception as e:
-            pass
+            print(e)
+
+    def get_table(self, table_name: str) -> pd.DataFrame:
+        try:
+            table = pd.read_sql_table(table_name=table_name, con=self.__engine)
+            return table
+        except Exception as e:
+            print(e)
 
     def get_prices(
         self,

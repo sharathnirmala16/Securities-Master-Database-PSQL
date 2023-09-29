@@ -1,11 +1,14 @@
 import jwt
 import schemas
 import models
+import pandas as pd
+
 from models import User
 from database import Base, engine, local_session
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from auth_bearer import JWTBearer
 from functools import wraps
@@ -22,6 +25,7 @@ from typing import Dict, List
 from securities_master import SecuritiesMaster
 from credentials import psql_credentials
 from datetime import datetime
+
 
 Base.metadata.create_all(engine)
 
@@ -193,9 +197,11 @@ async def get_all_tables(dependencies=Depends(JWTBearer())):
     return {"tables": tables}
 
 
-@app.get("/getusers")
-async def getusers(
-    dependencies=Depends(JWTBearer()), session: Session = Depends(get_session)
-):
-    users = session.query(models.User.username).all()
-    return users
+@app.get("/get-table/{table_name}")
+async def get_table(table_name: str, dependencies=Depends(JWTBearer())):
+    if table_name not in securities_master.get_all_tables():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+        )
+    table = securities_master.get_table(table_name).to_dict(orient="records")
+    return JSONResponse(content=table)
