@@ -95,6 +95,26 @@ class SecuritiesMaster:
         except Exception as e:
             print(e)
 
+    @staticmethod
+    def __build_query(query_type: str, table_name: str, data: dict) -> str:
+        if query_type == "INSERT":
+            sql = f"INSERT INTO {table_name}"
+            sql += " VALUES("
+            for value in data.values():
+                sql += f"'{value}',"
+            sql = sql.removesuffix(",")
+            sql += ")"
+            return sql
+
+    def add_row(self, table_name: str, row_data: dict) -> None:
+        try:
+            sql = self.__build_query(
+                query_type="INSERT", table_name=table_name, data=row_data
+            )
+            self.__engine.execute(sql)
+        except Exception as e:
+            print(e)
+
     def get_prices(
         self,
         tickers: List[str],

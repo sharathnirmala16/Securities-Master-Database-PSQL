@@ -205,3 +205,21 @@ async def get_table(table_name: str, dependencies=Depends(JWTBearer())):
         )
     table = securities_master.get_table(table_name).to_dict(orient="records")
     return JSONResponse(content=table)
+
+
+@app.post("/get-table/{table_name}/add-row")
+async def add_rows(table_name: str, row_data: Dict[str, int | float | str | None]):
+    if table_name not in securities_master.get_all_tables():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+        )
+    if (
+        list(row_data.keys())
+        == securities_master.get_table(table_name).columns.to_list()
+    ):
+        securities_master.add_row(table_name, row_data)
+        return {"message": "Added a new row successfully"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rows"
+        )
