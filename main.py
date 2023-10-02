@@ -203,8 +203,15 @@ async def get_table(table_name: str, dependencies=Depends(JWTBearer())):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
         )
-    table = securities_master.get_table(table_name).to_dict(orient="records")
-    return JSONResponse(content=table)
+
+    table = securities_master.get_table(table_name)
+
+    if pd.api.types.is_datetime64_any_dtype(table.index.to_series()):
+        table.index = table.index.to_series().dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+    for column in table.columns:
+        if pd.api.types.is_datetime64_any_dtype(table[column]):
+            table[column] = table[column].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+    return JSONResponse(content=table.to_dict(orient="records"))
 
 
 @app.post("/get-table/{table_name}/add-row")
