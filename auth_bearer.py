@@ -7,7 +7,7 @@ from models import TokenTable
 from credentials import JWT_SECRET_KEY, JWT_REFRESH_SECRET_KEY
 from typing import Any, Optional
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 1 day
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 ALGORITHM = "HS256"
 

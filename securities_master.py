@@ -53,23 +53,11 @@ class SecuritiesMaster:
     # NOTE Delete in Final Revision, for testing purpose only
     def temp(self):
         try:
-            tables = pd.read_sql_query(
-                sql="""select table_name from information_schema.tables where table_catalog = 'securities_master' and table_schema = 'public';""",
-                con=self.__engine,
-            )["table_name"].to_list()
-            tables.remove("datavendor")
-            tables.remove("symbol")
-            tables.remove("exchange")
-            for table in tables:
-                with self.__engine.connect() as conn:
-                    conn.execute(
-                        sql.text(
-                            f"""
-                        DROP TABLE {table};
-                        """
-                        )
-                    )
-
+            return sqlalchemy.inspection.inspect(
+                sqlalchemy.Table(
+                    "symbol", sqlalchemy.MetaData(bind=self.__engine), autoload=True
+                )
+            ).primary_key
         except Exception as e:
             print(e)
 
@@ -95,25 +83,22 @@ class SecuritiesMaster:
         except Exception as e:
             print(e)
 
-    @staticmethod
-    def __build_query(query_type: str, table_name: str, data: dict) -> str:
-        if query_type == "INSERT":
-            sql = f"INSERT INTO {table_name}"
-            sql += " VALUES("
-            for value in data.values():
-                sql += f"'{value}',"
-            sql = sql.removesuffix(",")
-            sql += ")"
-            return sql
+    def __get_table_object(self, table_name: str) -> sqlalchemy.Table:
+        return sqlalchemy.Table(
+            table_name, sqlalchemy.MetaData(bind=self.__engine), autoload=True
+        )
 
     def add_row(self, table_name: str, row_data: dict) -> None:
         try:
-            sql = self.__build_query(
-                query_type="INSERT", table_name=table_name, data=row_data
-            )
-            self.__engine.execute(sql)
+            table = self.__get_table_object(table_name)
+            stmt = sqlalchemy.insert(table).values(row_data)
+            with self.__engine.connect() as conn:
+                conn.execute(stmt)
         except Exception as e:
             print(e)
+
+    def edit_row(table_name: str, row_data: dict):
+        pass
 
     def get_prices(
         self,

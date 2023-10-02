@@ -34,6 +34,7 @@ commands = {
             linked_table_name VARCHAR(255) NOT NULL, 
             created_datetime TIMESTAMP NOT NULL, 
             last_updated_datetime TIMESTAMP NOT NULL, 
+            PRIMARY KEY (ticker, vendor, exchange, interval),
             CONSTRAINT exchange_frk
                 FOREIGN KEY(exchange)
                     REFERENCES Exchange(name),
