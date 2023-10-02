@@ -3,6 +3,7 @@ import string
 import sqlalchemy
 import numpy as np
 import pandas as pd
+
 from sqlalchemy import sql
 from commons import INTERVAL
 from datetime import datetime
@@ -53,11 +54,7 @@ class SecuritiesMaster:
     # NOTE Delete in Final Revision, for testing purpose only
     def temp(self):
         try:
-            return sqlalchemy.inspection.inspect(
-                sqlalchemy.Table(
-                    "symbol", sqlalchemy.MetaData(bind=self.__engine), autoload=True
-                )
-            ).primary_key
+            return self.__get_column_names(self.__get_table_object("datavendor"))
         except Exception as e:
             print(e)
 
@@ -83,6 +80,14 @@ class SecuritiesMaster:
         except Exception as e:
             print(e)
 
+    @staticmethod
+    def __get_column_names(table: sqlalchemy.Table) -> List[str]:
+        columns_list = []
+        for column in table.columns:
+            columns_list.append(column.name)
+
+        return columns_list
+
     def __get_table_object(self, table_name: str) -> sqlalchemy.Table:
         return sqlalchemy.Table(
             table_name, sqlalchemy.MetaData(bind=self.__engine), autoload=True
@@ -91,14 +96,31 @@ class SecuritiesMaster:
     def add_row(self, table_name: str, row_data: dict) -> None:
         try:
             table = self.__get_table_object(table_name)
+            if "created_datetime" in self.__get_column_names(table):
+                row_data["created_datetime"] = datetime.now()
+            if "last_updated_datetime" in self.__get_column_names(table):
+                row_data["last_updated_datetime"] = datetime.now()
+
             stmt = sqlalchemy.insert(table).values(row_data)
             with self.__engine.connect() as conn:
                 conn.execute(stmt)
         except Exception as e:
             print(e)
 
-    def edit_row(table_name: str, row_data: dict):
-        pass
+    # def edit_row(self,table_name: str, row_data: dict):
+    #     try:
+    #         table = self.__get_table_object(table_name)
+    #         stmt = sqlalchemy.update(table).values(row_data).where(table.c.primary_key_column == primary_key_value)
+
+    #     except Exception as e:
+    #         print(e)
+
+    def delete_table(self, table_name: str) -> None:
+        try:
+            table = self.__get_table_object(table_name)
+            table.drop()
+        except Exception as e:
+            print(e)
 
     def get_prices(
         self,
