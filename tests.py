@@ -9,8 +9,8 @@ from sql_commands import commands
 from typing import Union, Dict, List
 from credentials import psql_credentials
 from securities_master import *
-from BaseClasses import *
-from Exchanges import *
+from base_classes import *
+from exchanges import *
 
 # DataMaster instance
 dm = SecuritiesMaster(
@@ -78,5 +78,14 @@ def test_get_tickers():
     # print(NSETickers.get_tickers(index='NIFTYREALITY'))
 
 
-# Main Code
-dm.temp()
+from DVApiManagers.yahoo import YahooData
+
+print(
+    YahooData.get_data(
+        index="NIFTY50",
+        interval=INTERVAL.m5.value,
+        start_datetime=datetime(2023, 9, 3),
+        end_datetime=datetime(2023, 10, 3),
+        progress=True,
+    )
+)
