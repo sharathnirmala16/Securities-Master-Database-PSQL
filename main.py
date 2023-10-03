@@ -214,6 +214,16 @@ async def get_table(table_name: str, dependencies=Depends(JWTBearer())):
     return JSONResponse(content=table.to_dict(orient="records"))
 
 
+@app.delete("/delete-table/{table_name}")
+async def delete_table(table_name: str):
+    if table_name not in securities_master.get_all_tables():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+        )
+    securities_master.delete_table(table_name)
+    return {"message": "table deleted successfully"}
+
+
 @app.post("/get-table/{table_name}/add-row")
 async def add_rows(table_name: str, row_data: Dict[str, int | float | str | None]):
     if table_name not in securities_master.get_all_tables():
