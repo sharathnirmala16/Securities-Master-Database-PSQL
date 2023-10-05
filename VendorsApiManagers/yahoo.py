@@ -1,17 +1,14 @@
 import os
 import time
-import progressbar
 import numpy as np
 import pandas as pd
 import yfinance as yf
 from commons import INTERVAL, YFINANCE_BENCHMARK_INDEX
-from exchanges import NSETickers, BSETickers
-from base_classes import APIManager
-from abc import ABC, abstractmethod
+from Exchanges.nse_tickers import NSETickers
+from VendorsApiManagers.api_manager import APIManager
 from typing import Union, Dict, List
-from securities_master import SecuritiesMaster
 from datetime import datetime, timedelta
-from credentials import psql_credentials
+import concurrent.futures
 
 
 class YahooData(APIManager):
@@ -75,21 +72,6 @@ class YahooData(APIManager):
                 progress=progress,
             )
         else:
-            # progress bar code
-            progress_bar_widget = [
-                " [",
-                progressbar.Timer(format="elapsed time: %(elapsed)s"),
-                "] ",
-                progressbar.Bar("*"),
-                " (",
-                progressbar.ETA(),
-                ") ",
-                progressbar.Percentage(),
-            ]
-            bar = progressbar.ProgressBar(
-                max_value=len(tickers), widgets=progress_bar_widget
-            ).start()
-            step_count = 0
             for ticker in tickers:
                 try:
                     df = yf.download(
@@ -103,10 +85,7 @@ class YahooData(APIManager):
                         dataframe=df, replace_close=replace_close
                     )
                 except Exception as e:
-                    print(e)
-                if progress:
-                    step_count += 1
-                    bar.update(step_count)
+                    print(f"Error download data for {ticker}: {e}")
 
         return res_dict
 
@@ -136,6 +115,12 @@ class YahooData(APIManager):
             tickers = YahooData.__yf_format_tickers(
                 list(NSETickers.get_tickers(index=index).keys()), exchange=exchange
             )
+
         return YahooData.__download_data(
-            tickers, interval, start_datetime, end_datetime, replace_close, progress
+            tickers=tickers,
+            interval=interval,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+            replace_close=replace_close,
+            progress=progress,
         )

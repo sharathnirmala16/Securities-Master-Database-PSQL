@@ -3,13 +3,14 @@ import pandas as pd
 from commons import *
 from io import StringIO
 from requests import Session
-from abc import ABC, abstractmethod
-from base_classes import IndexLoader
+from Exchanges.index_loader import IndexLoader
 from typing import Union, Dict, List
 from datetime import datetime, timedelta
 
 
 class NSETickers(IndexLoader):
+    __abbreviation = "NSE"
+
     @staticmethod
     def get_url_dict() -> Dict[str, str]:
         return {index.name: index.value for index in NSE_URL}
@@ -44,6 +45,6 @@ class NSETickers(IndexLoader):
         except Exception as e:
             print(e)
 
-
-class BSETickers(IndexLoader):
-    pass
+    @property
+    def abbreviation(self) -> str:
+        return NSETickers.__abbreviation
