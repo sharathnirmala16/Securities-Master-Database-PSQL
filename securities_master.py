@@ -37,9 +37,9 @@ class SecuritiesMaster:
                 if not (v.startswith("_") or callable(m))
             }
         except Exception as e:
-            print(e)
+            raise e
 
-    def __create_base_tables(self) -> None:
+    def __create_base_tables(self) -> None | Exception:
         """
         Specifically for creating the base tables that are
         necessary for basic operations.
@@ -49,16 +49,16 @@ class SecuritiesMaster:
                 with self.__engine.connect() as conn:
                     conn.execute(sql.text(command))
         except Exception as e:
-            print(e)
+            raise e
 
     # NOTE Delete in Final Revision, for testing purpose only
     def temp(self):
         try:
-            return self.__get_column_names(self.__get_table_object("datavendor"))
+            return self.__get_table_object("symbol")
         except Exception as e:
-            print(e)
+            raise e
 
-    def get_all_tables(self) -> List[str]:
+    def get_all_tables(self) -> List[str] | Exception:
         try:
             tables = pd.read_sql_query(
                 sql="""select table_name from information_schema.tables where table_catalog = 'securities_master' and table_schema = 'public';""",
@@ -71,14 +71,14 @@ class SecuritiesMaster:
                 pass
             return tables
         except Exception as e:
-            print(e)
+            raise e
 
     def get_table(self, table_name: str) -> pd.DataFrame:
         try:
             table = pd.read_sql_table(table_name=table_name, con=self.__engine)
             return table
         except Exception as e:
-            print(e)
+            raise e
 
     @staticmethod
     def __get_column_names(table: sqlalchemy.Table) -> List[str]:
@@ -100,27 +100,70 @@ class SecuritiesMaster:
                 row_data["created_datetime"] = datetime.now()
             if "last_updated_datetime" in self.__get_column_names(table):
                 row_data["last_updated_datetime"] = datetime.now()
-
             stmt = sqlalchemy.insert(table).values(row_data)
             with self.__engine.connect() as conn:
                 conn.execute(stmt)
         except Exception as e:
-            print(e)
+            raise e
 
-    # def edit_row(self,table_name: str, row_data: dict):
-    #     try:
-    #         table = self.__get_table_object(table_name)
-    #         stmt = sqlalchemy.update(table).values(row_data).where(table.c.primary_key_column == primary_key_value)
+    def edit_row(
+        self,
+        table_name: str,
+        old_row_data: Dict[str, str],
+        new_row_data: Dict[str, str],
+    ) -> None:
+        try:
+            table = self.__get_table_object(table_name)
+            if "created_datetime" in self.__get_column_names(table):
+                new_row_data.pop("created_datetime")
+            if "last_updated_datetime" in self.__get_column_names(table):
+                new_row_data["last_updated_datetime"] = datetime.now()
+            primary_key_values = dict(
+                map(lambda col: (col.name, old_row_data[col.name]), table.primary_key)
+            )
 
-    #     except Exception as e:
-    #         print(e)
+            stmt = (
+                sqlalchemy.update(table)
+                .values(new_row_data)
+                .where(
+                    sqlalchemy.and_(
+                        *(
+                            getattr(table.c, key) == primary_key_values[key]
+                            for key in primary_key_values
+                        )
+                    )
+                )
+            )
+            with self.__engine.connect() as conn:
+                conn.execute(stmt)
+        except Exception as e:
+            raise e
+
+    def delete_row(self, table_name: str, row_data: Dict[str, str]) -> None:
+        try:
+            table = self.__get_table_object(table_name)
+            primary_key_values = dict(
+                map(lambda col: (col.name, row_data[col.name]), table.primary_key)
+            )
+            stmt = sqlalchemy.delete(table).where(
+                sqlalchemy.and_(
+                    *(
+                        getattr(table.c, key) == primary_key_values[key]
+                        for key in primary_key_values
+                    )
+                )
+            )
+            with self.__engine.connect() as conn:
+                conn.execute(stmt)
+        except Exception as e:
+            raise e
 
     def delete_table(self, table_name: str) -> None:
         try:
             table = self.__get_table_object(table_name)
             table.drop()
         except Exception as e:
-            print(e)
+            raise e
 
     def get_prices(
         self,

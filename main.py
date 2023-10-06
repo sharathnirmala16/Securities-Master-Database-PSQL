@@ -193,50 +193,100 @@ def token_required(func):
 
 @app.get("/get-all-tables")
 async def get_all_tables(dependencies=Depends(JWTBearer())):
-    tables: List[str] = securities_master.get_all_tables()
-    return {"tables": tables}
+    try:
+        tables: List[str] = securities_master.get_all_tables()
+        return {"tables": tables}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
 
 
 @app.get("/get-table/{table_name}")
 async def get_table(table_name: str, dependencies=Depends(JWTBearer())):
-    if table_name not in securities_master.get_all_tables():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
-        )
+    try:
+        if table_name not in securities_master.get_all_tables():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+            )
 
-    table = securities_master.get_table(table_name)
+        table = securities_master.get_table(table_name)
 
-    if pd.api.types.is_datetime64_any_dtype(table.index.to_series()):
-        table.index = table.index.to_series().dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-    for column in table.columns:
-        if pd.api.types.is_datetime64_any_dtype(table[column]):
-            table[column] = table[column].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-    return JSONResponse(content=table.to_dict(orient="records"))
+        if pd.api.types.is_datetime64_any_dtype(table.index.to_series()):
+            table.index = table.index.to_series().dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+        for column in table.columns:
+            if pd.api.types.is_datetime64_any_dtype(table[column]):
+                table[column] = table[column].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+        return JSONResponse(content=table.to_dict(orient="records"))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
 
 
 @app.delete("/delete-table/{table_name}")
 async def delete_table(table_name: str):
-    if table_name not in securities_master.get_all_tables():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
-        )
-    securities_master.delete_table(table_name)
-    return {"message": "table deleted successfully"}
+    try:
+        if table_name not in securities_master.get_all_tables():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+            )
+        securities_master.delete_table(table_name)
+        return {"message": "table deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
 
 
-@app.post("/get-table/{table_name}/add-row")
+@app.post("/{table_name}/add-row")
 async def add_rows(table_name: str, row_data: Dict[str, int | float | str | None]):
-    if table_name not in securities_master.get_all_tables():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
-        )
-    if (
-        list(row_data.keys())
-        == securities_master.get_table(table_name).columns.to_list()
-    ):
-        securities_master.add_row(table_name, row_data)
-        return {"message": "Added a new row successfully"}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rows"
-        )
+    try:
+        if table_name not in securities_master.get_all_tables():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+            )
+        if (
+            list(row_data.keys())
+            == securities_master.get_table(table_name).columns.to_list()
+        ):
+            securities_master.add_row(table_name, row_data)
+            return {"message": "Added a new row successfully"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rows"
+            )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
+
+
+@app.put("/{table_name}/edit-row")
+async def edit_row(
+    table_name: str,
+    old_row_data: Dict[str, int | float | str | None],
+    new_row_data: Dict[str, int | float | str | None],
+):
+    try:
+        if table_name not in securities_master.get_all_tables():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+            )
+        if set(new_row_data.keys()).issubset(
+            set(securities_master.get_table(table_name).columns.to_list())
+        ):
+            old_row_data = {}
+            securities_master.edit_row(table_name, old_row_data, new_row_data)
+            return {"message": "Edited a row successfully"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rows"
+            )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
+
+
+@app.delete("/{table_name}/delete-row")
+async def delete_row(table_name: str, row_data: Dict):
+    try:
+        if table_name not in securities_master.get_all_tables():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+            )
+        securities_master.delete_row(table_name, row_data)
+        return {"message": "Row deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
