@@ -202,22 +202,19 @@ async def get_all_tables(dependencies=Depends(JWTBearer())):
 
 @app.get("/get-table/{table_name}")
 async def get_table(table_name: str, dependencies=Depends(JWTBearer())):
-    try:
-        if table_name not in securities_master.get_all_tables():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
-            )
+    if table_name not in securities_master.get_all_tables():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Table not found"
+        )
 
-        table = securities_master.get_table(table_name)
+    table = securities_master.get_table(table_name)
 
-        if pd.api.types.is_datetime64_any_dtype(table.index.to_series()):
-            table.index = table.index.to_series().dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-        for column in table.columns:
-            if pd.api.types.is_datetime64_any_dtype(table[column]):
-                table[column] = table[column].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-        return JSONResponse(content=table.to_dict(orient="records"))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
+    if pd.api.types.is_datetime64_any_dtype(table.index.to_series()):
+        table.index = table.index.to_series().dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+    for column in table.columns:
+        if pd.api.types.is_datetime64_any_dtype(table[column]):
+            table[column] = table[column].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+    return JSONResponse(content=table.to_dict(orient="records"))
 
 
 @app.delete("/delete-table/{table_name}")
