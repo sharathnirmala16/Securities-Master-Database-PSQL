@@ -288,4 +288,4 @@ async def delete_row(table_name: str, row_data: Dict):
         securities_master.delete_row(table_name, row_data)
         return {"message": "Row deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
