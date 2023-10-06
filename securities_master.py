@@ -39,7 +39,7 @@ class SecuritiesMaster:
         except Exception as e:
             raise e
 
-    def __create_base_tables(self) -> None | Exception:
+    def __create_base_tables(self) -> None:
         """
         Specifically for creating the base tables that are
         necessary for basic operations.
@@ -58,7 +58,7 @@ class SecuritiesMaster:
         except Exception as e:
             raise e
 
-    def get_all_tables(self) -> List[str] | Exception:
+    def get_all_tables(self) -> List[str]:
         try:
             tables = pd.read_sql_query(
                 sql="""select table_name from information_schema.tables where table_catalog = 'securities_master' and table_schema = 'public';""",
