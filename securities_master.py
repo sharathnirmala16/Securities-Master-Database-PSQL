@@ -30,7 +30,7 @@ class SecuritiesMaster:
             )
             self.__create_base_tables()
 
-            # Converts the INTERVAL class into a dictionary for reference inside the DataMaster class.
+            # Converts the INTERVAL class into a dictionary to be used inside the DataMaster class.
             self.__intervals = {
                 v: m
                 for v, m in vars(INTERVAL).items()
