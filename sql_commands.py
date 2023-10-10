@@ -1,5 +1,5 @@
 commands = {
-    'CreateExchangeTable':'''
+    "CreateExchangeTable": """
         CREATE TABLE IF NOT EXISTS Exchange (
             name VARCHAR(255) PRIMARY KEY,
             abbreviation VARCHAR(32) NOT NULL,  
@@ -11,8 +11,8 @@ commands = {
             created_datetime TIMESTAMP NOT NULL, 
             last_updated_datetime TIMESTAMP NOT NULL
         );
-    ''',
-    'CreateDataVendorTable':'''
+    """,
+    "CreateDataVendorTable": """
         CREATE TABLE IF NOT EXISTS DataVendor (
             name VARCHAR(255) PRIMARY KEY,
             website_url VARCHAR(255) NULL,  
@@ -20,21 +20,27 @@ commands = {
             created_datetime TIMESTAMP NOT NULL, 
             last_updated_datetime TIMESTAMP NOT NULL
         );
-    ''',
-    'CreateSymbolTable':'''
+    """,
+    "CreateSymbolTable": """
         CREATE TABLE IF NOT EXISTS Symbol ( 
-            ticker VARCHAR(64) PRIMARY KEY,
-            exchange VARCHAR(255) NULL,
+            ticker VARCHAR(64) NOT NULL,
+            vendor_ticker VARCHAR(64) NOT NULL,
+            exchange VARCHAR(255) NOT NULL,
+            vendor VARCHAR(255) NOT NULL,
             instrument VARCHAR(64) NOT NULL,
             name VARCHAR(255) NULL,
             sector VARCHAR(255) NULL,  
-            currency VARCHAR(64) NULL,
-            linked_table VARCHAR(32) NOT NULL, 
+            interval BIGINT NOT NULL,
+            linked_table_name VARCHAR(255) NOT NULL, 
             created_datetime TIMESTAMP NOT NULL, 
             last_updated_datetime TIMESTAMP NOT NULL, 
-            CONSTRAINT ticker_exchange_frk
+            PRIMARY KEY (ticker, vendor, exchange, interval),
+            CONSTRAINT exchange_frk
                 FOREIGN KEY(exchange)
-                    REFERENCES Exchange(name) 
+                    REFERENCES Exchange(name),
+            CONSTRAINT vendor_frk
+                FOREIGN KEY(vendor)
+                    REFERENCES DataVendor(name)
         );
-    ''',
+    """,
 }

@@ -1,4 +1,18 @@
-class INTERVAL:
+from enum import Enum
+
+
+class VENDOR(Enum):
+    YAHOO = "Yahoo Finance"
+    ICICI = "ICICI Direct Breeze API"
+    ANGEL_BROKING = "Angel Broking Smart API"
+
+
+class EXCHANGE(Enum):
+    NSE = "National Stock Exchange"
+    BSE = "Bombay Stock Exchange"
+
+
+class INTERVAL(Enum):
     ms1 = 1
     ms5 = 5
     ms10 = 10
@@ -19,42 +33,38 @@ class INTERVAL:
     mo1 = 2592000000
     y1 = 31104000000
 
-nse_url_dict = {
-    'NIFTY50':'https://archives.nseindia.com/content/indices/ind_nifty50list.csv',
-    'NIFTY100':'https://www.niftyindices.com/IndexConstituent/ind_nifty100list.csv',
-    'NIFTY500':'https://archives.nseindia.com/content/indices/ind_nifty500list.csv',
-    'NIFTYMIDCAP150':'https://www.niftyindices.com/IndexConstituent/ind_niftymidcap150list.csv',
-    'NIFTYSMALLCAP250':'https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap250list.csv',
-    'NIFTYMICROCAP250':'https://www.niftyindices.com/IndexConstituent/ind_niftymicrocap250_list.csv',
-    'NIFTYNEXT50':'https://archives.nseindia.com/content/indices/ind_niftynext50list.csv',
-    'NIFTYBANK':'https://www.niftyindices.com/IndexConstituent/ind_niftybanklist.csv',
-    'NIFTYIT':'https://www.niftyindices.com/IndexConstituent/ind_niftyitlist.csv',
-    'NIFTYHEALTHCARE':'https://www.niftyindices.com/IndexConstituent/ind_niftyhealthcarelist.csv',
-    'NIFTYFINSERVICE':'https://www.niftyindices.com/IndexConstituent/ind_niftyfinancelist.csv',
-    'NIFTYAUTO':'https://www.niftyindices.com/IndexConstituent/ind_niftyautolist.csv',
-    'NIFTYPHARMA':'https://www.niftyindices.com/IndexConstituent/ind_niftypharmalist.csv',
-    'NIFTYFMCG':'https://www.niftyindices.com/IndexConstituent/ind_niftyfmcglist.csv',
-    'NIFTYMEDIA':'https://www.niftyindices.com/IndexConstituent/ind_niftymedialist.csv',
-    'NIFTYMETAL':'https://www.niftyindices.com/IndexConstituent/ind_niftymetallist.csv',
-    'NIFTYREALTY':'https://www.niftyindices.com/IndexConstituent/ind_niftyrealtylist.csv'
-}
 
-yfinance_benchmark_indices = {
-    'NIFTY50':'^NSEI', 
-    'NIFTY100':'^CNX100',
-    'NIFTY500':'^CRSLDX', 
-    'NIFTYMIDCAP150':'NIFTYMIDCAP150.NS',
-    'NIFTYSMALLCAP250':'NIFTYSMLCAP250.NS',
-    'NIFTYMICROCAP250':'NIFTY_MICROCAP250.NS',
-    'NIFTYNEXT50':'^NSMIDCP',
-    'NIFTYBANK':'^NSEBANK',
-    'NIFTYIT':'^CNXIT',
-    'NIFTYHEALTHCARE':'NIFTY_HEALTHCARE.NS',
-    'NIFTYFINSERVICE':'NIFTY_FIN_SERVICE.NS',
-    'NIFTYAUTO':'^CNXAUTO',
-    'NIFTYPHARMA':'^CNXPHARMA',
-    'NIFTYFMCG':'^CNXFMCG',
-    'NIFTYMEDIA':'^CNXMEDIA',
-    'NIFTYMETAL':'^CNXMETAL',
-    'NIFTYREALTY':'^CNXREALTY'
-}
+class NSE_URL(Enum):
+    NIFTY50 = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
+    NIFTY100 = "https://www.niftyindices.com/IndexConstituent/ind_nifty100list.csv"
+    NIFTY500 = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+    NIFTYMIDCAP150 = (
+        "https://www.niftyindices.com/IndexConstituent/ind_niftymidcap150list.csv"
+    )
+    NIFTYSMALLCAP250 = (
+        "https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap250list.csv"
+    )
+    NIFTYMICROCAP250 = (
+        "https://www.niftyindices.com/IndexConstituent/ind_niftymicrocap250_list.csv"
+    )
+    NIFTYNEXT50 = (
+        "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
+    )
+    NIFTYBANK = "https://www.niftyindices.com/IndexConstituent/ind_niftybanklist.csv"
+    NIFTYIT = "https://www.niftyindices.com/IndexConstituent/ind_niftyitlist.csv"
+    NIFTYHEALTHCARE = (
+        "https://www.niftyindices.com/IndexConstituent/ind_niftyhealthcarelist.csv"
+    )
+    NIFTYFINSERVICE = (
+        "https://www.niftyindices.com/IndexConstituent/ind_niftyfinancelist.csv"
+    )
+    NIFTYAUTO = "https://www.niftyindices.com/IndexConstituent/ind_niftyautolist.csv"
+    NIFTYPHARMA = (
+        "https://www.niftyindices.com/IndexConstituent/ind_niftypharmalist.csv"
+    )
+    NIFTYFMCG = "https://www.niftyindices.com/IndexConstituent/ind_niftyfmcglist.csv"
+    NIFTYMEDIA = "https://www.niftyindices.com/IndexConstituent/ind_niftymedialist.csv"
+    NIFTYMETAL = "https://www.niftyindices.com/IndexConstituent/ind_niftymetallist.csv"
+    NIFTYREALTY = (
+        "https://www.niftyindices.com/IndexConstituent/ind_niftyrealtylist.csv"
+    )
