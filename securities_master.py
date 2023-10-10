@@ -232,7 +232,7 @@ class SecuritiesMaster:
             try:
                 data: pd.DataFrame = pd.read_sql_query(
                     sql=f"""
-                        SELECT * FROM {table_name} 
+                        SELECT * FROM "{table_name}" 
                         WHERE 
                             "Datetime" >= '{start_datetime.strftime("%Y-%m-%d %H:%M:%S")}' 
                             AND 
@@ -276,7 +276,8 @@ class SecuritiesMaster:
                             "vendor_ticker": vendor_obj.get_vendor_ticker(
                                 ticker, exchange
                             ),
-                            "exchange": EXCHANGE(exchange).name,
+                            "exchange": exchange,
+                            "vendor": vendor,
                             "instrument": INSTRUMENT(instrument).name,
                             "name": ticker,
                             "sector": vendor_obj.get_ticker_detail(
