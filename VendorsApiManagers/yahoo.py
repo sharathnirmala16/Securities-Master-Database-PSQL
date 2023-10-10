@@ -3,15 +3,46 @@ import time
 import numpy as np
 import pandas as pd
 import yfinance as yf
-from commons import INTERVAL, YFINANCE_BENCHMARK_INDEX
+import importlib
+from commons import INTERVAL
 from Exchanges.nse_tickers import NSETickers
 from VendorsApiManagers.api_manager import APIManager
 from typing import Union, Dict, List
 from datetime import datetime, timedelta
-import concurrent.futures
+from enum import Enum
+from Exchanges.index_loader import IndexLoader
+from commons import EXCHANGE, VENDOR, INTERVAL
+
+
+class EXCHANGE_SUFFIX(Enum):
+    NSE = "NS"
+    BSE = "BO"
+
+
+class YFINANCE_BENCHMARK_INDEX(Enum):
+    NIFTY50 = "^NSEI"
+    NIFTY100 = "^CNX100"
+    NIFTY500 = "^CRSLDX"
+    NIFTYMIDCAP150 = "NIFTYMIDCAP150.NS"
+    NIFTYSMALLCAP250 = "NIFTYSMLCAP250.NS"
+    NIFTYMICROCAP250 = "NIFTY_MICROCAP250.NS"
+    NIFTYNEXT50 = "^NSMIDCP"
+    NIFTYBANK = "^NSEBANK"
+    NIFTYIT = "^CNXIT"
+    NIFTYHEALTHCARE = "NIFTY_HEALTHCARE.NS"
+    NIFTYFINSERVICE = "NIFTY_FIN_SERVICE.NS"
+    NIFTYAUTO = "^CNXAUTO"
+    NIFTYPHARMA = "^CNXPHARMA"
+    NIFTYFMCG = "^CNXFMCG"
+    NIFTYMEDIA = "^CNXMEDIA"
+    NIFTYMETAL = "^CNXMETAL"
+    NIFTYREALTY = "^CNXREALTY"
 
 
 class YahooData(APIManager):
+    def __init__(self, login_credentials: Dict[str, str]) -> None:
+        super().__init__(login_credentials)
+
     @staticmethod
     def __get_valid_interval(interval: int) -> str:
         intervals = {interval.name: interval.value for interval in INTERVAL}
@@ -32,12 +63,9 @@ class YahooData(APIManager):
         return valid_intervals[interval]
 
     @staticmethod
-    def __get_yf_indices() -> Dict[str, str]:
-        return {index.name: index.value for index in YFINANCE_BENCHMARK_INDEX}
-
-    @staticmethod
     def __download_data(
         tickers: list,
+        exchange: str,
         interval: int,
         start_datetime: datetime,
         end_datetime: datetime,
@@ -52,30 +80,35 @@ class YahooData(APIManager):
             )
         interval = YahooData.__get_valid_interval(interval)
 
-        indices = YahooData.__get_yf_indices()
-        for i in range(len(tickers)):
-            if tickers[i] in indices.keys():
-                tickers[i] = indices[tickers[i]]
-
         start_date, end_date = start_datetime.strftime(
             "%Y-%m-%d"
         ), end_datetime.strftime("%Y-%m-%d")
 
         res_dict: Dict[str, str] = {}
 
+        index_names = [index.name for index in YFINANCE_BENCHMARK_INDEX]
+        formatted_tickers = list(
+            map(
+                lambda ticker: f"{ticker}.{getattr(EXCHANGE_SUFFIX, EXCHANGE(exchange).name).value}"
+                if ticker not in index_names
+                else getattr(YFINANCE_BENCHMARK_INDEX, ticker).value,
+                tickers,
+            )
+        )
+
         if len(tickers) == 1:
             res_dict[tickers[0]] = yf.download(
-                tickers=tickers,
+                tickers=formatted_tickers,
                 start=start_date,
                 end=end_date,
                 interval=interval,
                 progress=progress,
             )
         else:
-            for ticker in tickers:
+            for i, ticker in enumerate(tickers):
                 try:
                     df = yf.download(
-                        tickers=ticker,
+                        tickers=formatted_tickers[i],
                         start=start_date,
                         end=end_date,
                         interval=interval,
@@ -90,21 +123,13 @@ class YahooData(APIManager):
         return res_dict
 
     @staticmethod
-    def __yf_format_tickers(tickers: List[str], exchange: str) -> List[str]:
-        suffix = ""
-        if exchange == "NSE":
-            suffix = "NS"
-
-        return [f"{ticker}.{suffix}" for ticker in tickers]
-
-    @staticmethod
     def get_data(
         interval: int,
         start_datetime: datetime,
         end_datetime: datetime,
+        exchange: str,
         tickers: List[str] = None,
         index: str = None,
-        exchange: str = "NSE",
         replace_close=False,
         progress=False,
     ) -> Dict[str, pd.DataFrame]:
@@ -112,12 +137,22 @@ class YahooData(APIManager):
         if tickers is None and index is None:
             raise Exception("Either 'tickers' of 'index' must be given")
         if index is not None and tickers is None:
-            tickers = YahooData.__yf_format_tickers(
-                list(NSETickers.get_tickers(index=index).keys()), exchange=exchange
+            exchange_obj: IndexLoader = getattr(
+                importlib.import_module(
+                    name=f"Exchanges.{EXCHANGE(exchange).name.lower()}_tickers"
+                ),  # module name
+                f"{EXCHANGE(exchange).name}Tickers",  # class name
+            )
+            tickers = list(
+                map(
+                    lambda ticker: f"{ticker}.{getattr(EXCHANGE_SUFFIX, EXCHANGE(exchange).name).value}",
+                    exchange_obj.get_tickers(index=index).keys(),
+                )
             )
 
         return YahooData.__download_data(
             tickers=tickers,
+            exchange=exchange,
             interval=interval,
             start_datetime=start_datetime,
             end_datetime=end_datetime,

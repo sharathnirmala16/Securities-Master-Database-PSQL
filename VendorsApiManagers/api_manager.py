@@ -6,6 +6,11 @@ from datetime import datetime, timedelta
 
 
 class APIManager(ABC):
+    _login_credentials: Dict[str, str]
+
+    def __init__(self, login_credentials: Dict[str, str]) -> None:
+        self._login_credentials = login_credentials
+
     @staticmethod
     def __search(search_list: list, columns: pd.Index) -> Union[str, None]:
         for element in search_list:
@@ -80,30 +85,13 @@ class APIManager(ABC):
 
     @staticmethod
     @abstractmethod
-    def __get_valid_interval():
-        pass
-
-    @staticmethod
-    @abstractmethod
     def get_data(
-        tickers: list,
         interval: int,
         exchange: str,
         start_datetime: datetime,
         end_datetime: datetime,
-        replace_close=False,
-        progress=False,
-    ) -> Dict[str, pd.DataFrame]:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def get_data(
-        index: str,
-        interval: int,
-        exchange: str,
-        start_datetime: datetime,
-        end_datetime: datetime,
+        tickers: List[str] = None,
+        index: str = None,
         replace_close=False,
         progress=False,
     ) -> Dict[str, pd.DataFrame]:

@@ -1,6 +1,17 @@
 from enum import Enum
 
 
+class VENDOR(Enum):
+    YAHOO = "Yahoo Finance"
+    ICICI = "ICICI Direct Breeze API"
+    ANGEL_BROKING = "Angel Broking Smart API"
+
+
+class EXCHANGE(Enum):
+    NSE = "National Stock Exchange"
+    BSE = "Bombay Stock Exchange"
+
+
 class INTERVAL(Enum):
     ms1 = 1
     ms5 = 5
@@ -21,26 +32,6 @@ class INTERVAL(Enum):
     w1 = 604800000
     mo1 = 2592000000
     y1 = 31104000000
-
-
-class YFINANCE_BENCHMARK_INDEX(Enum):
-    NIFTY50 = "^NSEI"
-    NIFTY100 = "^CNX100"
-    NIFTY500 = "^CRSLDX"
-    NIFTYMIDCAP150 = "NIFTYMIDCAP150.NS"
-    NIFTYSMALLCAP250 = "NIFTYSMLCAP250.NS"
-    NIFTYMICROCAP250 = "NIFTY_MICROCAP250.NS"
-    NIFTYNEXT50 = "^NSMIDCP"
-    NIFTYBANK = "^NSEBANK"
-    NIFTYIT = "^CNXIT"
-    NIFTYHEALTHCARE = "NIFTY_HEALTHCARE.NS"
-    NIFTYFINSERVICE = "NIFTY_FIN_SERVICE.NS"
-    NIFTYAUTO = "^CNXAUTO"
-    NIFTYPHARMA = "^CNXPHARMA"
-    NIFTYFMCG = "^CNXFMCG"
-    NIFTYMEDIA = "^CNXMEDIA"
-    NIFTYMETAL = "^CNXMETAL"
-    NIFTYREALTY = "^CNXREALTY"
 
 
 class NSE_URL(Enum):

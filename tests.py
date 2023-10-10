@@ -13,12 +13,12 @@ from Exchanges.index_loader import *
 from Exchanges.nse_tickers import *
 
 # DataMaster instance
-# dm = SecuritiesMaster(
-#     psql_credentials["host"],
-#     psql_credentials["port"],
-#     psql_credentials["username"],
-#     psql_credentials["password"],
-# )
+dm = SecuritiesMaster(
+    psql_credentials["host"],
+    psql_credentials["port"],
+    psql_credentials["username"],
+    psql_credentials["password"],
+)
 
 
 # def update_table_test():
@@ -78,14 +78,57 @@ from Exchanges.nse_tickers import *
 #     # print(NSETickers.get_tickers(index='NIFTYREALITY'))
 
 
-from VendorsApiManagers.yahoo import YahooData
+# from VendorsApiManagers.api_manager import APIManager
+# from commons import VENDOR
+# import importlib
 
-data = YahooData.get_data(
-    index="NIFTY50",
-    interval=INTERVAL.m5.value,
-    start_datetime=datetime(2023, 9, 3),
-    end_datetime=datetime(2023, 10, 3),
-    progress=False,
+# vendor = VENDOR.YAHOO.value
+# class_obj: APIManager = getattr(
+#     importlib.import_module(name=f"VendorsApiManagers.{VENDOR(vendor).name.lower()}"),
+#     f"{VENDOR(vendor).name[0:1] + VENDOR(vendor).name[1:].lower()}Tickers",
+# )
+
+# df = class_obj.get_data(
+#     tickers=["TCS.NS"],
+#     interval=INTERVAL.d1.value,
+#     exchange=EXCHANGE.NSE.value,
+#     start_datetime=datetime(2018, 1, 1),
+#     end_datetime=datetime(2019, 1, 1),
+# )
+# print(df)
+
+
+# class Base(ABC):
+#     _string: str
+
+#     def __init__(self, string) -> None:
+#         self._string = string
+
+#     @abstractmethod
+#     def print_string(self) -> None:
+#         pass
+
+
+# class Child(Base):
+#     def __init__(self, string) -> None:
+#         super().__init__(string)
+
+#     def print_string(self) -> None:
+#         print(self._string)
+
+
+# c = Child("Hello")
+# c.print_string()
+
+tickers = ["TCS", "RELIANCE", "NIFTY50"]
+
+data = dm.get_prices(
+    interval=INTERVAL.d1.value,
+    start_datetime=datetime(2018, 1, 1),
+    end_datetime=datetime(2021, 1, 1),
+    vendor=VENDOR.YAHOO.value,
+    exchange=EXCHANGE.NSE.value,
+    tickers=tickers,
 )
 
-print(len(data))
+print(data)

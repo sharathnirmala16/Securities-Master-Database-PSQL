@@ -1,15 +1,20 @@
 import random
 import string
+import importlib
 import sqlalchemy
 import numpy as np
 import pandas as pd
 
-from sqlalchemy import sql
-from commons import INTERVAL
+
+from sqlalchemy import sql, exc
 from datetime import datetime
 from sql_commands import commands
 from typing import Union, Dict, List
 from credentials import psql_credentials
+from custom_types import PandasAssetData
+from Exchanges.index_loader import IndexLoader
+from commons import INTERVAL, VENDOR, EXCHANGE
+from VendorsApiManagers.api_manager import APIManager
 
 
 class SecuritiesMaster:
@@ -29,13 +34,6 @@ class SecuritiesMaster:
                 self.__url, isolation_level="AUTOCOMMIT"
             )
             self.__create_base_tables()
-
-            # Converts the INTERVAL class into a dictionary for reference inside the DataMaster class.
-            self.__intervals = {
-                v: m
-                for v, m in vars(INTERVAL).items()
-                if not (v.startswith("_") or callable(m))
-            }
         except Exception as e:
             raise e
 
@@ -165,31 +163,96 @@ class SecuritiesMaster:
         except Exception as e:
             raise e
 
+    def __verify_vendor(self, vendor: str) -> bool:
+        vendors = self.get_table("datavendor")["name"].to_list()
+        if vendor in vendors:
+            return True
+        return False
+
+    def __verify_exchange(self, exchange: str) -> bool:
+        exchanges = self.get_table("exchange")["name"].to_list()
+        if exchange in exchanges:
+            return True
+        return False
+
     def get_prices(
         self,
-        tickers: List[str],
         interval: int,
         start_datetime: datetime,
         end_datetime: datetime,
-        vendor="Any",
+        vendor: str,
+        exchange: str,
+        tickers: List[str] = None,
+        index: str = None,
+        vendor_login_credentials: Dict[str, str] = {},
         progress=False,
-        download_missing=True,
-    ) -> Dict[str, Union[pd.DataFrame, None]]:
+    ) -> Dict[str, pd.DataFrame]:
         """
         Publically available method that the user can call to obtain
         data for a list of tickers.
         """
         # Checking validity of inputs
-        assert len(tickers) > 0, "tickers list is empty"
-        assert self.__verify_vendor(vendor), f"'{vendor}' not in vendor list."
-        assert (
-            interval in self.__intervals.values()
-        ), f"{interval} not in given INTERVAL. Use these intervals:\n{self.__intervals}"
-        assert (
-            end_datetime > start_datetime
-        ), f"start_datetime({start_datetime}) must be before end_datetime({end_datetime})"
+        if len(tickers) < 0:
+            raise Exception("tickers list is empty")
+        if not self.__verify_vendor(vendor):
+            raise Exception(f"'{vendor}' not in vendor list.")
+        if not self.__verify_exchange(exchange):
+            raise Exception(f"'{exchange}' not in vendor list.")
+        if interval not in [interval.value for interval in INTERVAL]:
+            raise Exception(f"{interval} not in INTERVAL Enum.")
+        if end_datetime < start_datetime:
+            raise Exception(
+                f"start_datetime({start_datetime}) must be before end_datetime({end_datetime})"
+            )
 
-        if download_missing:
-            pass
-        else:
-            pass
+        vendor_obj: APIManager = getattr(
+            importlib.import_module(
+                name=f"VendorsApiManagers.{VENDOR(vendor).name.lower()}"
+            ),  # module name
+            f"{VENDOR(vendor).name[0:1] + VENDOR(vendor).name[1:].lower()}Data",  # class name
+        )(vendor_login_credentials)
+
+        if tickers is None and index is None:
+            raise Exception("Either 'tickers' of 'index' must be given")
+        if index is not None and tickers is None:
+            exchange_obj: IndexLoader = getattr(
+                importlib.import_module(
+                    name=f"Exchanges.{EXCHANGE(exchange).name.lower()}_tickers"
+                ),  # module name
+                f"{EXCHANGE(exchange).name}Tickers",  # class name
+            )
+            tickers = list(exchange_obj.get_tickers(index=index).keys())
+
+        data_dict: Dict[str, pd.DataFrame] = {}
+        # load data from the database, if not found or valid range is not present, then get them from the vendor
+        for ticker in tickers:
+            table_name: str = (
+                f"PRICES_{ticker}_{EXCHANGE(exchange).name}_{INTERVAL(interval).name}"
+            )
+            try:
+                data: pd.DataFrame = pd.read_sql_query(
+                    sql=f"""
+                        SELECT * FROM {table_name} 
+                        WHERE 
+                            datetime >= '{start_datetime.strftime("%Y-%m-%d %H:%M:%S.%f")}' 
+                            AND 
+                            datetime <= '{end_datetime.strftime("%Y-%m-%d %H:%M:%S.%f")}'
+                    """,
+                    con=self.__engine,
+                )
+                if data.empty:
+                    raise ValueError
+            except ValueError and exc.ProgrammingError:
+                data = vendor_obj.get_data(
+                    interval=interval,
+                    exchange=exchange,
+                    start_datetime=start_datetime,
+                    end_datetime=end_datetime,
+                    tickers=[ticker],
+                    replace_close=False,
+                    progress=False,
+                )
+
+            data_dict[ticker] = data[ticker]
+
+        return data_dict
