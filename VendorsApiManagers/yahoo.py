@@ -159,3 +159,11 @@ class YahooData(APIManager):
             replace_close=replace_close,
             progress=progress,
         )
+
+    @staticmethod
+    def get_vendor_ticker(ticker: str, exchange: str) -> str:
+        return f"{ticker}.{getattr(EXCHANGE_SUFFIX, EXCHANGE(exchange).name).value}"
+
+    @staticmethod
+    def get_ticker_detail(ticker: str, exchange: str, detail: str) -> str:
+        return yf.Ticker(YahooData.get_vendor_ticker(ticker, exchange)).info[detail]

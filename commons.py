@@ -12,6 +12,16 @@ class EXCHANGE(Enum):
     BSE = "Bombay Stock Exchange"
 
 
+class INSTRUMENT(Enum):
+    STOCK = "Stock"
+    ETF = "Exchange Traded Fund"
+    MF = "Mutual Fund"
+    FUTURE = "Future"
+    OPTION = "Option"
+    FOREX = "Foreign Exchange"
+    CRYPTO = "Cryptocurrency"
+
+
 class INTERVAL(Enum):
     ms1 = 1
     ms5 = 5
@@ -35,6 +45,7 @@ class INTERVAL(Enum):
 
 
 class NSE_URL(Enum):
+    ALL_TICKERS = "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
     NIFTY50 = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
     NIFTY100 = "https://www.niftyindices.com/IndexConstituent/ind_nifty100list.csv"
     NIFTY500 = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"

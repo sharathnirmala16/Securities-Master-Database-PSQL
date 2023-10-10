@@ -120,15 +120,20 @@ dm = SecuritiesMaster(
 # c = Child("Hello")
 # c.print_string()
 
-tickers = ["TCS", "RELIANCE", "NIFTY50"]
+import time
 
+t1 = time.time()
 data = dm.get_prices(
     interval=INTERVAL.d1.value,
     start_datetime=datetime(2018, 1, 1),
-    end_datetime=datetime(2021, 1, 1),
+    end_datetime=datetime(2023, 1, 1),
     vendor=VENDOR.YAHOO.value,
     exchange=EXCHANGE.NSE.value,
-    tickers=tickers,
+    instrument=INSTRUMENT.STOCK.value,
+    index="NIFTY50",
+    cache_data=True,
 )
+t2 = time.time()
 
 print(data)
+print(f"Execution Time: {t2 - t1}s")

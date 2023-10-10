@@ -96,3 +96,13 @@ class APIManager(ABC):
         progress=False,
     ) -> Dict[str, pd.DataFrame]:
         pass
+
+    @staticmethod
+    @abstractmethod
+    def get_vendor_ticker(ticker: str, exchange: str) -> str:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_ticker_detail(ticker: str, exchange: str, detail: str) -> str:
+        pass
