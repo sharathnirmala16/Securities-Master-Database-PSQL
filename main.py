@@ -289,3 +289,45 @@ async def delete_row(table_name: str, row_data: Dict):
         return {"message": "Row deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@app.post("/get-prices")
+async def get_prices(
+    interval: int,
+    start_datetime: str,
+    end_datetime: str,
+    vendor: str,
+    exchange: str,
+    instrument: str,
+    tickers: List[str] = [],
+    index: str = "",
+    vendor_login_credentials: Dict[str, str] = {},
+    cache_data=False,
+):
+    try:
+        data: Dict[str, pd.DataFrame] = securities_master.get_prices(
+            interval=interval,
+            start_datetime=datetime.strptime(start_datetime, "%Y-%m-%d %H:%M:%S"),
+            end_datetime=datetime.strptime(end_datetime, "%Y-%m-%d %H:%M:%S"),
+            vendor=vendor,
+            exchange=exchange,
+            instrument=instrument,
+            tickers=None if tickers == [] else tickers,
+            index=None if index == "" else index,
+            vendor_login_credentials=vendor_login_credentials,
+            cache_data=cache_data,
+        )
+
+        for ticker in data:
+            table = data[ticker].copy(deep=True)
+            if pd.api.types.is_datetime64_any_dtype(table.index.to_series()):
+                table.index = table.index.to_series().dt.strftime(
+                    "%Y-%m-%d %H:%M:%S.%f"
+                )
+            for column in table.columns:
+                if pd.api.types.is_datetime64_any_dtype(table[column]):
+                    table[column] = table[column].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+            data[ticker] = table.reset_index(drop=False).to_dict(orient="records")
+        return JSONResponse(content=data)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
