@@ -125,7 +125,7 @@ import time
 t1 = time.time()
 data = dm.get_prices(
     interval=INTERVAL.d1.value,
-    start_datetime=datetime(2018, 1, 1),
+    start_datetime=datetime(2017, 1, 1),
     end_datetime=datetime(2023, 1, 1),
     vendor=VENDOR.YAHOO.value,
     exchange=EXCHANGE.NSE.value,

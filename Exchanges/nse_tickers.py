@@ -43,7 +43,7 @@ class NSETickers(IndexLoader):
                 tickers_sector[df["Symbol"][i]] = df["Industry"][i]
             return tickers_sector
         except Exception as e:
-            print(e)
+            raise e
 
     @property
     def abbreviation(self) -> str:

@@ -117,8 +117,8 @@ class YahooData(APIManager):
                     res_dict[ticker] = APIManager.process_OHLC_dataframe(
                         dataframe=df, replace_close=replace_close
                     )
-                except Exception as e:
-                    print(f"Error download data for {ticker}: {e}")
+                except:
+                    res_dict[ticker] = pd.DataFrame()
 
         return res_dict
 

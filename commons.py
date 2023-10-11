@@ -4,7 +4,7 @@ from enum import Enum
 class VENDOR(Enum):
     YAHOO = "Yahoo Finance"
     ICICI = "ICICI Direct Breeze API"
-    ANGEL_BROKING = "Angel Broking Smart API"
+    ANGELBROKING = "Angel Broking Smart API"
 
 
 class EXCHANGE(Enum):

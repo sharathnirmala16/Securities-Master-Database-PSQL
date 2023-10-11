@@ -7,7 +7,8 @@ import pandas as pd
 
 
 from sqlalchemy import sql, exc
-from datetime import datetime
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timedelta
 from sql_commands import commands
 from typing import Union, Dict, List
 from credentials import psql_credentials
@@ -91,7 +92,7 @@ class SecuritiesMaster:
             table_name, sqlalchemy.MetaData(bind=self.__engine), autoload=True
         )
 
-    def add_row(self, table_name: str, row_data: dict) -> None:
+    def add_row(self, table_name: str, row_data: Dict[str, str]) -> None:
         try:
             table = self.__get_table_object(table_name)
             if "created_datetime" in self.__get_column_names(table):
@@ -101,6 +102,16 @@ class SecuritiesMaster:
             stmt = sqlalchemy.insert(table).values(row_data)
             with self.__engine.connect() as conn:
                 conn.execute(stmt)
+        except Exception as e:
+            raise e
+
+    def get_row(
+        self, table_name: str, primary_key_values: Dict[str, str]
+    ) -> Dict[str, str]:
+        try:
+            table = self.__get_table_object(table_name)
+            session = sessionmaker(bind=self.__engine.connect())()
+            return dict(session.query(table).filter_by(**primary_key_values).first())
         except Exception as e:
             raise e
 
@@ -116,6 +127,10 @@ class SecuritiesMaster:
                 new_row_data.pop("created_datetime")
             if "last_updated_datetime" in self.__get_column_names(table):
                 new_row_data["last_updated_datetime"] = datetime.now()
+            if old_row_data is None:
+                raise Exception("old_row_data is None")
+            if new_row_data is None:
+                raise Exception("new_row_data is None")
             primary_key_values = dict(
                 map(lambda col: (col.name, old_row_data[col.name]), table.primary_key)
             )
@@ -175,6 +190,151 @@ class SecuritiesMaster:
             return True
         return False
 
+    def __cache_data_to_db(
+        self,
+        data: pd.DataFrame,
+        table_name: str,
+        ticker: str,
+        vendor: str,
+        vendor_obj: APIManager,
+        exchange: str,
+        interval: int,
+        instrument: str,
+    ) -> None:
+        data.to_sql(name=table_name, con=self.__engine, if_exists="replace", index=True)
+        try:
+            self.add_row(
+                table_name="symbol",
+                row_data={
+                    "ticker": ticker,
+                    "vendor_ticker": vendor_obj.get_vendor_ticker(ticker, exchange),
+                    "exchange": exchange,
+                    "vendor": vendor,
+                    "instrument": INSTRUMENT(instrument).name,
+                    "name": ticker,
+                    "sector": vendor_obj.get_ticker_detail(ticker, exchange, "sector"),
+                    "interval": interval,
+                    "linked_table_name": table_name,
+                    "created_datetime": (datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                    "last_updated_datetime": (
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    ),
+                },
+            )
+        except:
+            self.edit_row(
+                table_name="symbol",
+                old_row_data=self.get_row(
+                    table_name="symbol",
+                    primary_key_values={
+                        "ticker": ticker,
+                        "vendor": vendor,
+                        "exchange": exchange,
+                        "interval": interval,
+                    },
+                ),
+                new_row_data={
+                    "ticker": ticker,
+                    "vendor_ticker": vendor_obj.get_vendor_ticker(ticker, exchange),
+                    "exchange": exchange,
+                    "vendor": vendor,
+                    "instrument": INSTRUMENT(instrument).name,
+                    "name": ticker,
+                    "sector": vendor_obj.get_ticker_detail(ticker, exchange, "sector"),
+                    "interval": interval,
+                    "linked_table_name": table_name,
+                    "created_datetime": (datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                    "last_updated_datetime": (
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    ),
+                },
+            )
+
+    def __fill_missing_data(
+        self,
+        dataframe: pd.DataFrame,
+        ticker: str,
+        interval: int,
+        start_datetime: datetime,
+        end_datetime: datetime,
+        vendor: str,
+        vendor_obj: APIManager,
+        exchange: str,
+        instrument: str,
+        cache_data: bool,
+        progress: bool,
+    ) -> pd.DataFrame:
+        """
+        checks dataframe to ensure that all the data in the required date range is present.
+        checks to make sure that both the start date and the end date are within 5 days of specified start and end dates.
+        if missing, vendor object is used to download the data for the missing date range, if that fails or no data exists,
+        dataframe is returned as it is.
+        """
+        if type(dataframe.index[0]) != pd.Timestamp:
+            raise Exception(
+                f"Dataframe's index must be of type {type(pd.Timestamp(start_datetime))}, it is of type {type(dataframe.index[0])}"
+            )
+
+        table_name: str = f"prices_{ticker.lower()}_{VENDOR(vendor).name.lower()}_{EXCHANGE(exchange).name.lower()}_{INTERVAL(interval).name.lower()}"
+        dataframe_start_datetime: datetime = dataframe.index[0].to_pydatetime()
+        dataframe_end_datetime: datetime = dataframe.index[-1].to_pydatetime()
+
+        data_appended: bool = False
+
+        if np.abs((dataframe_start_datetime - start_datetime).days) > 5:
+            data = vendor_obj.get_data(
+                interval=interval,
+                exchange=exchange,
+                start_datetime=start_datetime - timedelta(days=1),
+                end_datetime=dataframe_start_datetime,
+                tickers=[ticker],
+                replace_close=False,
+                progress=False,
+            )[ticker]
+            dataframe
+            index_name = dataframe.index.name
+            dataframe = pd.concat([dataframe, data])
+            dataframe = dataframe[~dataframe.index.duplicated(keep="first")]
+            dataframe.index.name = index_name
+            data_appended = True
+
+        if np.abs((dataframe_end_datetime - end_datetime).days) > 5:
+            data = vendor_obj.get_data(
+                interval=interval,
+                exchange=exchange,
+                start_datetime=dataframe_end_datetime - timedelta(days=1),
+                end_datetime=end_datetime,
+                tickers=[ticker],
+                replace_close=False,
+                progress=False,
+            )[ticker]
+            index_name = dataframe.index.name
+            dataframe = pd.concat([dataframe, data])
+            dataframe = dataframe[~dataframe.index.duplicated(keep="first")]
+            dataframe.index.name = index_name
+            data_appended = True
+
+        dataframe = vendor_obj.process_OHLC_dataframe(
+            dataframe=dataframe,
+            datetime_index=True,
+            replace_close=False,
+            capital_col_names=True,
+        )
+
+        if data_appended and cache_data:
+            self.__cache_data_to_db(
+                data=dataframe,
+                table_name=table_name,
+                ticker=ticker,
+                vendor=vendor,
+                vendor_obj=vendor_obj,
+                exchange=exchange,
+                interval=interval,
+                instrument=instrument,
+            )
+
+        return dataframe
+
     def get_prices(
         self,
         interval: int,
@@ -207,6 +367,10 @@ class SecuritiesMaster:
         if end_datetime < start_datetime:
             raise Exception(
                 f"start_datetime({start_datetime}) must be before end_datetime({end_datetime})"
+            )
+        if end_datetime >= datetime.now():
+            raise Exception(
+                f"end_datetime({end_datetime}) must be at or before current datetime{datetime.now()}"
             )
 
         vendor_obj: APIManager = getattr(
@@ -243,55 +407,49 @@ class SecuritiesMaster:
                 if data.empty:
                     raise ValueError
                 else:
-                    data = vendor_obj.process_OHLC_dataframe(
-                        dataframe=data,
-                        datetime_index=True,
-                        replace_close=False,
-                        capital_col_names=True,
+                    data = self.__fill_missing_data(
+                        dataframe=vendor_obj.process_OHLC_dataframe(
+                            dataframe=data,
+                            datetime_index=True,
+                            replace_close=False,
+                            capital_col_names=True,
+                        ).sort_index(ascending=True),
+                        ticker=ticker,
+                        interval=interval,
+                        start_datetime=start_datetime,
+                        end_datetime=end_datetime,
+                        vendor=vendor,
+                        vendor_obj=vendor_obj,
+                        exchange=exchange,
+                        instrument=instrument,
+                        cache_data=cache_data,
+                        progress=progress,
                     )
             except (ValueError, exc.ProgrammingError) as e:
-                if isinstance(e, ValueError):
-                    print("Data Empty")
-                data = vendor_obj.get_data(
-                    interval=interval,
-                    exchange=exchange,
-                    start_datetime=start_datetime,
-                    end_datetime=end_datetime,
-                    tickers=[ticker],
-                    replace_close=False,
-                    progress=False,
-                )[ticker]
                 data = vendor_obj.process_OHLC_dataframe(
-                    dataframe=data,
+                    dataframe=vendor_obj.get_data(
+                        interval=interval,
+                        exchange=exchange,
+                        start_datetime=start_datetime,
+                        end_datetime=end_datetime,
+                        tickers=[ticker],
+                        replace_close=False,
+                        progress=False,
+                    )[ticker],
                     datetime_index=True,
                     replace_close=False,
                     capital_col_names=True,
-                )
+                ).sort_index(ascending=True)
                 if cache_data:
-                    data.to_sql(name=table_name, con=self.__engine, if_exists="append")
-                    self.add_row(
-                        table_name="symbol",
-                        row_data={
-                            "ticker": ticker,
-                            "vendor_ticker": vendor_obj.get_vendor_ticker(
-                                ticker, exchange
-                            ),
-                            "exchange": exchange,
-                            "vendor": vendor,
-                            "instrument": INSTRUMENT(instrument).name,
-                            "name": ticker,
-                            "sector": vendor_obj.get_ticker_detail(
-                                ticker, exchange, "sector"
-                            ),
-                            "interval": interval,
-                            "linked_table_name": table_name,
-                            "created_datetime": (
-                                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            ),
-                            "last_updated_datetime": (
-                                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            ),
-                        },
+                    self.__cache_data_to_db(
+                        data=data,
+                        table_name=table_name,
+                        ticker=ticker,
+                        vendor=vendor,
+                        vendor_obj=vendor_obj,
+                        exchange=exchange,
+                        interval=interval,
+                        instrument=instrument,
                     )
 
             data_dict[ticker] = data
