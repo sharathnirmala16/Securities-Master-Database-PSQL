@@ -11,4 +11,5 @@ fastapi==0.103.1
 passlib==1.7.4
 PyJWT==2.8.0
 bcrypt==4.0.1
+breeze_connect==1.0.48
 uvicorn[standard]==0.23.2
