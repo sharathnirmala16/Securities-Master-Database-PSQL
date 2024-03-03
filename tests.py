@@ -3,12 +3,14 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+import credentials
 from common.enums import *
 from common.exceptions import *
-from datetime import datetime
 from exchanges.nse import Nse
 from vendors.vendor import Vendor
 from vendors.yahoo import Yahoo
+from vendors.breeze import Breeze
+from datetime import datetime, timedelta
 
 
 class TestNse:
@@ -187,6 +189,7 @@ class TestYahoo:
 
     def test_get_data_errors(self):
         symbols = ["TCS"]
+        # no derivable symbols
         with pytest.raises(AttributeError):
             self.yahoo.get_data(
                 interval=INTERVAL.y1,
@@ -195,6 +198,7 @@ class TestYahoo:
                 end_datetime=datetime(2024, 2, 1),
                 adjusted_prices=True,
             )
+        # empty symbols
         with pytest.raises(ValueError):
             self.yahoo.get_data(
                 interval=INTERVAL.y1,
@@ -204,6 +208,7 @@ class TestYahoo:
                 symbols=[],
                 adjusted_prices=True,
             )
+        # invalid dates
         with pytest.raises(ValueError):
             self.yahoo.get_data(
                 interval=INTERVAL.y1,
@@ -212,6 +217,7 @@ class TestYahoo:
                 start_datetime=datetime(2024, 1, 2),
                 end_datetime=datetime(2024, 1, 1),
             )
+        # invalid interval
         with pytest.raises(ValueError):
             self.yahoo.get_data(
                 interval=INTERVAL.y1,
@@ -227,3 +233,163 @@ class TestYahoo:
 
     def test_get_symbol_details(self):
         assert len(self.yahoo.get_symbol_details("TCS", self.nse)) > 0
+
+
+class TestBreeze:
+    def setup_method(self):
+        # assumes SESSION_TOKEN is defined in credentials.py, if not add it manually to self.login_credentials
+        self.login_credentials = credentials.breeze_credentials
+        self.nse = Nse()
+        self.breeze = Breeze(self.login_credentials)
+
+    def test_customer_details(self):
+        assert len(self.breeze.customer_details) > 0
+
+    def test_get_data_errors(self):
+        symbols = ["TCS"]
+        with pytest.raises(AttributeError):
+            # no derivable symbols
+            self.breeze.get_data(
+                interval=INTERVAL.d1,
+                exchange=self.nse,
+                start_datetime=datetime(2024, 1, 1),
+                end_datetime=datetime(2024, 2, 1),
+            )
+        # empty symbols list
+        with pytest.raises(ValueError):
+            self.breeze.get_data(
+                interval=INTERVAL.d1,
+                exchange=self.nse,
+                start_datetime=datetime(2024, 1, 1),
+                end_datetime=datetime(2024, 2, 1),
+                symbols=[],
+            )
+        # invalid dates
+        with pytest.raises(ValueError):
+            self.breeze.get_data(
+                interval=INTERVAL.d1,
+                exchange=self.nse,
+                symbols=symbols,
+                start_datetime=datetime(2024, 1, 2),
+                end_datetime=datetime(2024, 1, 1),
+            )
+        # invalid interval
+        with pytest.raises(ValueError):
+            self.breeze.get_data(
+                interval=INTERVAL.y1,
+                exchange=self.nse,
+                start_datetime=datetime(2024, 1, 1),
+                end_datetime=datetime(2024, 2, 1),
+                symbols=symbols,
+            )
+        # adjusted prices not supported
+        with pytest.raises(BreezeException):
+            self.breeze.get_data(
+                interval=INTERVAL.d1,
+                exchange=self.nse,
+                start_datetime=datetime(2024, 1, 1),
+                end_datetime=datetime(2024, 2, 1),
+                symbols=symbols,
+                adjusted_prices=True,
+            )
+        # adjusted prices not supported
+        with pytest.raises(BreezeException):
+            self.breeze.get_data(
+                interval=INTERVAL.d1,
+                exchange=self.nse,
+                start_datetime=datetime(2024, 1, 1),
+                end_datetime=datetime(2024, 2, 1),
+                symbols=symbols,
+                drop_adjusted_prices=True,
+            )
+
+    @pytest.mark.download_required
+    def test_get_securities_master(self):
+        sec_master = self.breeze.get_securities_master(self.nse)
+        assert sec_master.shape[0] > 0
+
+    @pytest.mark.download_required
+    def test_get_data_single(self):
+        data = self.breeze.get_data(
+            interval=INTERVAL.m5,
+            exchange=self.nse,
+            start_datetime=(datetime.today() - timedelta(days=365 * 2)),
+            end_datetime=datetime.today(),
+            symbols=["TCS"],
+        )["TCS"]
+        assert data.shape[0] > 0 and data.shape[1] == 5
+
+    @pytest.mark.download_required
+    def test_get_data_single(self):
+        data = self.breeze.get_data(
+            interval=INTERVAL.m5,
+            exchange=self.nse,
+            start_datetime=(datetime.today() - timedelta(days=15)),
+            end_datetime=datetime.today(),
+            symbols=["RELIANCE"],
+        )
+        assert data["RELIANCE"].shape[0] > 0 and data["RELIANCE"].shape[1] == 5
+
+    @pytest.mark.download_required
+    def test_get_data_index_only(self):
+        data = self.breeze.get_data(
+            interval=INTERVAL.m5,
+            exchange=self.nse,
+            start_datetime=(datetime.today() - timedelta(days=15)),
+            end_datetime=datetime.today(),
+            symbols=["NIFTY50"],
+        )
+        assert data["NIFTY50"].shape[0] > 0 and data["NIFTY50"].shape[1] == 5
+
+    @pytest.mark.download_required
+    def test_get_data_index_symbols_mixed(self):
+        data = self.breeze.get_data(
+            interval=INTERVAL.m5,
+            exchange=self.nse,
+            start_datetime=(datetime.today() - timedelta(days=15)),
+            end_datetime=datetime.today(),
+            symbols=["NIFTY50", "TCS"],
+        )
+        assert data["NIFTY50"].shape[0] > 0 and data["NIFTY50"].shape[1] == 5
+
+    @pytest.mark.download_required
+    def test_get_data_index_constituents(self):
+        data = self.breeze.get_data(
+            interval=INTERVAL.m5,
+            exchange=self.nse,
+            start_datetime=(datetime.today() - timedelta(days=15)),
+            end_datetime=datetime.today(),
+            index="NIFTY50",
+        )
+        assert (
+            len(data) == 50
+            and data["RELIANCE"].shape[0] > 0
+            and data["RELIANCE"].shape[1] == 5
+        )
+
+    @pytest.mark.download_required
+    def test_get_data_multiple_symbols(self):
+        data = self.breeze.get_data(
+            interval=INTERVAL.m5,
+            exchange=self.nse,
+            start_datetime=(datetime.today() - timedelta(days=15)),
+            end_datetime=datetime.today(),
+            symbols=["RELIANCE", "ACC", "SBILIFE"],
+        )
+        assert (
+            len(data) == 3
+            and data["RELIANCE"].shape[0] > 0
+            and data["RELIANCE"].shape[1] == 5
+        )
+
+    def test_get_vendor_tickers(self):
+        vendor_tickers = self.breeze.get_vendor_tickers(
+            symbols=["TCS", "RELIANCE", "TATAMOTORS"], exchange=self.nse
+        )
+        assert len(vendor_tickers) == 3
+
+    def test_get_vendor_ticker(self):
+        assert "TATMOT" == self.breeze.get_vendor_ticker("TATAMOTORS", self.nse)
+
+    def test_get_symbol_details(self):
+        assert len(self.breeze.get_symbol_details("TATAMOTORS", exchange=self.nse)) > 0

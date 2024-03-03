@@ -89,4 +89,5 @@ class Nse(Exchange):
         data = self.__session.get(index.value).text
         data = StringIO(data)
         df = pd.read_csv(data, sep=",")
+        df.columns = df.columns.str.strip()
         return df

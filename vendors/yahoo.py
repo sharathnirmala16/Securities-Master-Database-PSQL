@@ -107,7 +107,7 @@ class Yahoo(Vendor):
             "%Y-%m-%d"
         ), end_datetime.strftime("%Y-%m-%d")
 
-        res_dict: dict[str, pd.DataFrame] = {}
+        results: dict[str, pd.DataFrame] = {}
 
         formatted_tickers = {
             symbol: ticker
@@ -127,7 +127,7 @@ class Yahoo(Vendor):
         if len(formatted_tickers) == 1:
             symbol = list(formatted_tickers.keys())[0]
             ticker = formatted_tickers[symbol]
-            res_dict[symbol] = yf.download(
+            results[symbol] = yf.download(
                 tickers=[ticker],
                 start=start_date,
                 end=end_date,
@@ -135,9 +135,9 @@ class Yahoo(Vendor):
                 progress=False,
             )
             if adjusted_prices:
-                res_dict[symbol] = self.get_adjusted_values(res_dict[symbol])
+                results[symbol] = self.get_adjusted_values(results[symbol])
             elif not adjusted_prices and drop_adjusted_prices:
-                res_dict[symbol] = res_dict[symbol].drop("Adj Close", axis=1)
+                results[symbol] = results[symbol].drop("Adj Close", axis=1)
         else:
             data: pd.DataFrame = yf.download(
                 tickers=list(formatted_tickers.values()),
@@ -148,15 +148,15 @@ class Yahoo(Vendor):
             )
             cols = ["Open", "High", "Low", "Close", "Adj Close", "Volume"]
             for symbol, ticker in formatted_tickers.items():
-                res_dict[symbol] = pd.DataFrame()
+                results[symbol] = pd.DataFrame()
                 for col in cols:
-                    res_dict[symbol][col] = data[col][ticker]
+                    results[symbol][col] = data[col][ticker]
                 if adjusted_prices:
-                    res_dict[symbol] = self.get_adjusted_values(res_dict[symbol])
+                    results[symbol] = self.get_adjusted_values(results[symbol])
                 elif not adjusted_prices and drop_adjusted_prices:
-                    res_dict[symbol] = res_dict[symbol].drop("Adj Close", axis=1)
+                    results[symbol] = results[symbol].drop("Adj Close", axis=1)
 
-        return res_dict
+        return results
 
     def get_symbol_details(self, symbol: str, exchange: Exchange) -> dict:
         return yf.Ticker(self.get_vendor_ticker(symbol, exchange)).info
